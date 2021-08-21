@@ -1,8 +1,6 @@
 import express from 'express'
 import mysql from 'mysql'
 import api from './api'
-import dbconfig from '../config/dbconfig'
-import GetData from '../db/connect'
 // import { Connect, Query } from '../db/connect'
 
 const app = express()
