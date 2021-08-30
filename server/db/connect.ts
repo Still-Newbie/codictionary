@@ -74,4 +74,11 @@ const UpdateData = async (program:string, table:string, value:JSON) => {
     return result
 }
 
-export { HostCheck, SelectData, InsertData, UpdateData }
+const DeleteData = async (program:string, table:string, seq:string) => {
+    const con = await Connect(program)
+    const query = `DELETE FROM ${table} WHERE SEQ=${seq}`
+    const result = await Query(con, query)
+    return true
+}
+
+export { HostCheck, SelectData, InsertData, UpdateData, DeleteData }
