@@ -1,10 +1,14 @@
 import express from 'express'
 import { SelectData, HostCheck } from '../../../db/connect'
+import getSchedule from './getSchedule'
 import addSchedule from './addSchedule'
+import deleteSchedule from './deleteSchedule'
 
 const todo = express.Router()
 
+todo.post("/getSchedule", getSchedule)
 todo.post("/addSchedule", addSchedule)
+todo.post("/deleteSchedule", deleteSchedule)
 
 // todo.get('/:table', async (req, res) => {
 //     HostCheck("todo", req, res)

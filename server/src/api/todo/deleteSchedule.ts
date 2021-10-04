@@ -10,7 +10,8 @@ async function deleteSchedule(req:express.Request, res:express.Response) {
         return res.status(200).json(seq)
     } catch (err) {
         console.log(err)
-        return res.status(400).send("{\"errMsg\":\""+err.message+"\"}")
+        return res.status(400).send("{\"errMsg\":\"요청이 거부되었습니다.\"}")
+        // return res.status(400).send("{\"errMsg\":\"" + err.message + "\"}")
     }
 }
 
