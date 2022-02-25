@@ -1,5 +1,5 @@
 import express from 'express'
-import { HostCheck, SelectData } from '../../../db/connect'
+import { HostCheck, SelectData, ErrMsg } from '../../../db/connect'
 
 // type schedule = {
 //     "TITLE" : string,
@@ -24,8 +24,7 @@ async function addSchedule(req:express.Request, res:express.Response) {
                                                                         OR ENDDT BETWEEN '${date.SDATE}' AND '${date.EDATE}'`)
         return res.status(200).json(rs)
     } catch (err) {
-        console.log(err)
-        return res.status(400).send("{\"errMsg\":\"요청이 거부되었습니다.\"}")
+        return res.status(400).send(ErrMsg)
     }
 }
 

@@ -1,14 +1,5 @@
 import express from 'express'
-import { InsertData, HostCheck } from '../../../db/connect'
-
-type schedule = {
-    "TITLE" : string,
-    "CONTENTS" : string,
-    "STARTDT" : string,
-    "STARTTIME" : string,
-    "ENDDT" : string,
-    "ENDTIME" : string,
-}
+import { InsertData, HostCheck, schedule, ErrMsg} from '../../../db/connect'
 
 async function addSchedule(req:express.Request, res:express.Response) {
     const auth = await HostCheck("todo", req, res)
@@ -19,7 +10,7 @@ async function addSchedule(req:express.Request, res:express.Response) {
         return res.status(200).json(schd)
     } catch (err) {
         console.log(err)
-        return res.status(400).send("{\"errMsg\":\"요청이 거부되었습니다.\"}")
+        return res.status(400).send(ErrMsg)
     }
 }
 

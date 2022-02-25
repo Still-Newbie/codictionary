@@ -2,6 +2,8 @@ import express from 'express'
 import mysql from 'mysql'
 import dbconfig from '../config/dbconfig'
 import authhosts from '../config/authhosts'
+import {types, schedule, stamp} from '../config/typeconfig'
+import e from 'express'
 
 const Connect = async (program:string) => new Promise<mysql.Connection>((res, rej) => {
     let config = dbconfig
@@ -20,11 +22,13 @@ const Query = async (con:mysql.Connection, q:string) => new Promise((res:any, re
 
     con.query(q, con, (err, result) => {
         if (err) {
-            rej(err);
+            let error = SqlErr(err.sqlState)
+            if(error) res(error)
+            else rej(err)
             return;
         }
         res(result);
-    });
+    })
 
 })
 
@@ -37,9 +41,11 @@ const HostCheck = async (db:string, req:express.Request, res:express.Response) =
         return false
 }
 
+// 데이터 불러오기
+// SelectData(프로그램명, 쿼리)
 const SelectData = async (program:string, query:string) => {
     const con = await Connect(program)
-    const result = await Query(con, query)
+    const result:any = await Query(con, query)
     return result
 }
 
@@ -47,6 +53,8 @@ type data = {
     [index: string]: any
 }
 
+// 데이터 넣기
+// InsertData(프로그램명, 테이블명, 값) 값이 string이면 자동으로 ' 붙임
 const InsertData = async (program:string, table:string, value:data) => {
     const con = await Connect(program)
     const columns = Object.keys(value)
@@ -67,18 +75,52 @@ const InsertData = async (program:string, table:string, value:data) => {
     const result = await Query(con, query)
 }
 
-const UpdateData = async (program:string, table:string, value:JSON) => {
+// 데이터 업데이트
+// UpdateData(프로그램, 테이블, 키값, 변경값)
+const UpdateData = async (program:string, table:string, key:data, value:data) => {
     const con = await Connect(program)
     const query = ""
     const result = await Query(con, query)
     return result
 }
 
-const DeleteData = async (program:string, table:string, seq:string) => {
+// 데이터 삭제
+// DeleteData(프로그램, 테이블, 키값)
+const DeleteData = async (program:string, table:string, value:data) => {
     const con = await Connect(program)
-    const query = `DELETE FROM ${table} WHERE SEQ=${seq}`
+    const columns = Object.keys(value)
+    let query = `DELETE FROM ${table} WHERE `
+    for(let i = 0; i < columns.length; i++){
+        if(i > 0) {
+            query += " AND "
+        }
+        query += `${columns[i]} = `
+        if(typeof(value[columns[i]]) === "string") query += '"' + value[columns[i]] + '"'
+        else query += value[columns[i]]
+    }
     const result = await Query(con, query)
-    return true
+    return result
 }
 
-export { HostCheck, SelectData, InsertData, UpdateData, DeleteData }
+// SQL 오류
+const SqlErr = async (sqlState:any) => {
+    let err = {
+        err : true,
+        errMsg : ""
+    }
+    console.log("sqlState : " + sqlState)
+    switch (sqlState) {
+        case "42000":
+            err.errMsg = "개발자에게 문의해주세요(에러코드:42000)"
+            return err
+            break;
+    
+        default:
+            return false
+            break;
+    }
+}
+
+const ErrMsg = "{\"err\":\"true\",\"errMsg\":\"요청이 거부되었습니다.\"}"
+
+export { HostCheck, SelectData, InsertData, UpdateData, DeleteData, data, ErrMsg, types, schedule, stamp }
