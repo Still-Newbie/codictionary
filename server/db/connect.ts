@@ -2,8 +2,21 @@ import express from 'express'
 import mysql from 'mysql'
 import dbconfig from '../config/dbconfig'
 import authhosts from '../config/authhosts'
-import {types, schedule, stamp} from '../config/typeconfig'
-import e from 'express'
+
+type Data = {
+    [index: string]: any
+}
+
+type APIresult = {
+    isErr : boolean,
+    errMsg : string,
+    data? : Data
+}
+
+const ErrMsg:APIresult = {
+    isErr : true,
+    errMsg : "요청이 거부되었습니다."
+}
 
 const Connect = async (program:string) => new Promise<mysql.Connection>((res, rej) => {
     let config = dbconfig
@@ -21,17 +34,26 @@ const Connect = async (program:string) => new Promise<mysql.Connection>((res, re
 const Query = async (con:mysql.Connection, q:string) => new Promise((res:any, rej:any) => {
 
     con.query(q, con, (err, result) => {
-        if (err) {
-            let error = SqlErr(err.sqlState)
-            if(error) res(error)
-            else rej(err)
-            return;
+        let r:APIresult = {
+            isErr : false,
+            errMsg : ""
         }
-        res(result);
+        if (err) {
+            console.log(err)
+            r.isErr = true
+            r.errMsg = SqlErr(err.sqlState)
+            res(r)
+        }else{
+            console.log("result")
+            console.log(result)
+            r.data = result
+            res(r)
+        }
     })
 
 })
 
+// client host 체크
 const HostCheck = async (db:string, req:express.Request, res:express.Response) => {
     const host:string = req.headers.host === undefined ? "" : req.headers.host?.toString()
     const hostlist = Object.keys(authhosts).indexOf(db) > -1 ? authhosts[db] : []
@@ -49,13 +71,9 @@ const SelectData = async (program:string, query:string) => {
     return result
 }
 
-type data = {
-    [index: string]: any
-}
-
 // 데이터 넣기
 // InsertData(프로그램명, 테이블명, 값) 값이 string이면 자동으로 ' 붙임
-const InsertData = async (program:string, table:string, value:data) => {
+const InsertData = async (program:string, table:string, value:Data) => {
     const con = await Connect(program)
     const columns = Object.keys(value)
     let col = " ("
@@ -66,18 +84,19 @@ const InsertData = async (program:string, table:string, value:data) => {
             val += ", "
         }
         col += columns[i]
-        if(typeof(value[columns[i]]) === "string") val += '"' + value[columns[i]] + '"'
+        if(typeof(value[columns[i]]) === "string" && value[columns[i]].indexOf("GETKEY") == -1) val += "'" + value[columns[i]] + "'"
         else val += value[columns[i]]
     }
     col += ")"
     val += ")"
     const query = `INSERT INTO ${table} ${col} ${val}`
     const result = await Query(con, query)
+    return result
 }
 
 // 데이터 업데이트
 // UpdateData(프로그램, 테이블, 키값, 변경값)
-const UpdateData = async (program:string, table:string, key:data, value:data) => {
+const UpdateData = async (program:string, table:string, key:Data, value:Data) => {
     const con = await Connect(program)
     const query = ""
     const result = await Query(con, query)
@@ -86,7 +105,7 @@ const UpdateData = async (program:string, table:string, key:data, value:data) =>
 
 // 데이터 삭제
 // DeleteData(프로그램, 테이블, 키값)
-const DeleteData = async (program:string, table:string, value:data) => {
+const DeleteData = async (program:string, table:string, value:Data) => {
     const con = await Connect(program)
     const columns = Object.keys(value)
     let query = `DELETE FROM ${table} WHERE `
@@ -102,25 +121,20 @@ const DeleteData = async (program:string, table:string, value:data) => {
     return result
 }
 
-// SQL 오류
-const SqlErr = async (sqlState:any) => {
-    let err = {
-        err : true,
-        errMsg : ""
-    }
+// SQL 오류 메세지
+function SqlErr(sqlState:any) :string {
     console.log("sqlState : " + sqlState)
     switch (sqlState) {
-        case "42000":
-            err.errMsg = "개발자에게 문의해주세요(에러코드:42000)"
-            return err
+        case "42000": // SYNTAX ERROR (구문오류)
+            return "개발자에게 문의해주세요(ERR1064)"
             break;
-    
+        case "42S22": // ER_BAD_FIELD_ERROR 1054
+            return "개발자에게 문의해주세요(ERR1054)"
+            break;
         default:
-            return false
+            return ""
             break;
     }
 }
 
-const ErrMsg = "{\"err\":\"true\",\"errMsg\":\"요청이 거부되었습니다.\"}"
-
-export { HostCheck, SelectData, InsertData, UpdateData, DeleteData, data, ErrMsg, types, schedule, stamp }
+export { HostCheck, SelectData, InsertData, UpdateData, DeleteData, ErrMsg }
